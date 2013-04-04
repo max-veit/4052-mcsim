@@ -16,14 +16,16 @@ const double deg_per_rad = 180.0/pi;
 
 int main(int argc, char** argv)
 {
+    /* System parameters and input */
+
     const char *usagemsg = "Usage: %s [-n numevents] [-l plength] [-w pwidth]"
-        "[-h height] [-x dist | -i inputfile] [-o outputfile]\n"
-        "\tWhere plength and pwidth are the paddles' lengths and widths,"
-        "\n\theight is the height of the top paddle off the ground. The paddle"
-        "\n\tdistances must either be specified on the command line, or in"
-        "\n\tthe specified inputfile as a newline-separated list of paddle"
-        "\n\tx-positions, beginning with the number of paddles."
-        "\n\tIf the output file is not specified, it defaults to stdout.";
+        "[-h height] [-x dist | -i inputfile] [-o outputfile]\n\n"
+        "\tWhere plength and pwidth are the paddles' lengths and widths, and"
+        "\n\theight is the height of the top paddle off the ground."
+        "\n\n\tThe paddle distances must either be specified on the command"
+        "\n\tline, or in the specified inputfile as a newline-separated list"
+        "\n\tof paddle x-positions, beginning with the number of paddles."
+        "\n\n\tIf the output file is not specified, it defaults to stdout.\n";
 
     //;-------------------------------------------
     //; Physical Properties of System
@@ -71,7 +73,12 @@ int main(int argc, char** argv)
     argc--;
 
     while (argc > 0) {
-        if ((strcmp(argv[0], "-n") == 0) && argc > 1) {
+        if ((strcmp(argv[0], "-h") == 0) ||
+            (strcmp(argv[0], "--help") == 0)) {
+            // The user asked for help -- print it out.
+            fprintf(stdout, usagemsg, prog_name);
+            exit(0);
+        } else if ((strcmp(argv[0], "-n") == 0) && argc > 1) {
             trial_max = atoi(argv[1]);
         } else if ((strcmp(argv[0], "-l") == 0) && argc > 1) {
             L = atof(argv[1]);
@@ -85,6 +92,11 @@ int main(int argc, char** argv)
             fin.open(argv[1], ifstream::in);
         } else if ((strcmp(argv[0], "-o") == 0) && argc > 1) {
             fout = new ofstream(argv[1], ofstream::out | ofstream::trunc);
+        } else {
+            fprintf(stdout, "Option not recognized: %s\n", argv[0]);
+            // Tell the user how to use the program
+            fprintf(stdout, usagemsg, prog_name);
+            exit(1);
         }
         // Advance to the next set of arguments.
         argc -= 2;
@@ -107,8 +119,10 @@ int main(int argc, char** argv)
     }
 
 
-//;----------------------------------------------------
-// Random number generator
+    /* Simulation Initialization */
+
+    //;----------------------------------------------------
+    // Random number generator
 
     //;------------------------------------
     // Choose theta_max (p_max)
@@ -142,6 +156,8 @@ int main(int argc, char** argv)
     double *sum_p_squared =
         (double*)calloc(n_lpanels, sizeof(double));   //Radians
 
+
+    /* Simulation Body */
 
     // The nesting order of the for-loops doesn't really matter, except
     // maybe for cache efficieny (relevant only for a large number of panels)
@@ -200,6 +216,7 @@ int main(int argc, char** argv)
 
     } // END double for loops over paddles & trials
 
+    /* Output of Results */
     double th_avg;
     double th_var;
 
@@ -220,10 +237,13 @@ int main(int argc, char** argv)
             counts[pidx] << endl;
     }
 
+    /* Cleanup and Exit */
     free(lower_x);
     free(counts);
     free(sum_p);
     free(sum_p_squared);
+
+    return 0;
 
     /*
     fout << "Counts = " << counts << endl
