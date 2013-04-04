@@ -184,7 +184,7 @@ int main(int argc, char** argv)
         //;---------------------------------------------
         // See if muon passes through detector
 
-        if( abs(y1 - y) < L/2 && abs (x1 - x) < W / 2)
+        if( abs(y1 - y) < L/2 && abs (lower_x[pidx] - x) < W / 2)
         {
             //Muon passes through
             counts[pidx]++;
@@ -207,14 +207,14 @@ int main(int argc, char** argv)
     if (fout == NULL) {
         fout = &cout;
     }
+    *fout << "Paddle No.,Distance,Angle,Average Angle," <<
+        "Angle Stdev,Counts" << endl;
     for (int pidx = 0; pidx < n_lpanels; pidx++) {
-        double th_avg = sum_p[pidx] / counts[pidx];
-        double th_var = sum_p_squared[pidx] / counts[pidx] - th_avg*th_avg;
-        *fout << "Paddle No.,Distance,Angle,Average Angle," <<
-            "Angle Stdev,Counts" << endl;
+        th_avg = sum_p[pidx] / counts[pidx];
+        th_var = sum_p_squared[pidx] / counts[pidx] - th_avg*th_avg;
         *fout << pidx << "," <<
             lower_x[pidx] << "," <<
-            atan(x1/z0)*deg_per_rad << "," <<
+            atan(lower_x[pidx]/z0)*deg_per_rad << "," <<
             th_avg*deg_per_rad << "," <<
             sqrt(th_var)*deg_per_rad << "," <<
             counts[pidx] << endl;
