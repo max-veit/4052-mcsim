@@ -18,6 +18,8 @@ def mk_cosk_dist(k, th_max):
     The function uses only operations that are also NumPy ufuncs, and is
     thus suitable to be called with NumPy vector/array arguments.
     """
+    # Not applicable for k=-1
+    assert k != -1
 
     # Normalization constant for the theta distribution
     th_norm = 1 - (cos(th_max))**(k+1)
