@@ -2,7 +2,7 @@
 
 import numpy as np
 from numpy import pi,cos,arccos
-import random
+from numpy.random import random_sample
 
 def mk_cosk_dist(k, th_max):
     """Return a function that transforms two uniformly-distributed
@@ -39,6 +39,13 @@ def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
     originating at the top detector panel, and count how many intercept the
     bottom panel(s).
 
+    A note on the coordinate system: The z-axis is the vertical direction,
+    the x-axis is the axis along which the bottom detectors are aligned, and
+    the y-axis is the axis along the panels' lengths. The z=0 plane is the
+    ground plane (on which the bottom detectors rest), and x=0, y=0 corresponds
+    to the lower left corner of the top detector (that is, the top detector
+    is contained within the (+x, +y) quadrant).
+
     Arguments:
     panel_pos       The horizontal positions (in the x-direction) of the
                     bottom panels relative to the top panel
@@ -56,4 +63,38 @@ def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
     blksize         The sizes of trial vectors to use to make this function
                     more efficient with vector processing.
     """
-    # Do magic here.
+    nblks = n // blksize
+    # Account for case when n is not a multiple of blksize
+    if nblks * blksize < n:
+        endblksize = n - nblks * blksize
+    else :
+        endblksize = blksize
+
+    hits = zeros_like(panel_pos)
+    th_acc = zeros_like(panel_pos)
+    th2_acc = zeros_like(panel_pos)
+
+    for blk in range(nblks):
+        if (blk == (nblks - 1)):
+            blksize = endblksize
+
+        # Pick random angles and make sure they are appropriately distributed
+        theta = random_sample(blksize)
+        phi = random_sample(blksize)
+        (theta, phi) = dist(theta, phi)
+        # Also pick a random position on the top detector
+        xt = random_sample(blksize) * panel_wd
+        yt = random_sample(blksize) * panel_len
+        # And determine where the intersections of the rays with the
+        # groundplane are.
+        xb = xt + cos(phi) * panel_ht*tan(theta)
+        yb = yt + sin(phi) * panel_ht*tan(theta)
+
+        # Count the number of intersections
+        it = nditer([panel_pos, hits], op_flags=['readwrite', 'external_loop'])
+        for pos, phits in it:
+            intersect = ((xb >= pos) & (xb <= pos + panel_wd) & 
+                    (yb >= 0) & (yb <= panel_len))
+            phits += sum(intersect)
+
+
