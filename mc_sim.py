@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-from numpy import pi,cos,arccos,sin,tan,sum,size
+from numpy import pi,cos,arccos,sin,tan,sum,size,sqrt
 from numpy.random import random_sample
 from math import ceil
 
@@ -28,7 +28,7 @@ def mk_cosk_dist(k, th_max):
     # The distribution function (inverse CDF) itself
     def cosk_dist(u_th, u_ph):
         theta = arccos((1 - th_norm*u_th)**(1 / (k+1)))
-        phi = u_ph / (2*pi)
+        phi = u_ph * (2*pi)
         return (theta, phi)
     return cosk_dist
 
@@ -37,11 +37,11 @@ cos2_dist = mk_cosk_dist(2, pi/2)
 
 def cos2_dist(u_th, u_ph):
     theta = arccos((1 - u_th)**(1/3))
-    phi = u_ph / (2*pi)
+    phi = u_ph * (2*pi)
     return (theta, phi)
 
 def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
-        dist=cos2_dist, blksize=1024):
+        dist=cos2_dist, blksize=1E6):
     """Generate random particle events with a given angular distribution,
     originating at the top detector panel, and count how many intercept the
     bottom panel(s).
@@ -71,12 +71,14 @@ def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
                     more efficient with vector processing.
     """
     nblks = ceil(n / blksize)
+    if (blksize > n):
+        blksize = n
+        nblks = 1
     # Account for case when n is not a multiple of blksize
     if nblks * blksize > n:
         endblksize = n - (nblks-1) * blksize
     else :
         endblksize = blksize
-    print("Using {} blocks of size {} (end: {})".format(nblks, blksize, endblksize))
 
     hits = np.zeros_like(panel_pos)
     th_acc = np.zeros_like(panel_pos)
@@ -108,14 +110,12 @@ def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
         for pos, phits, th, th2 in it:
             intersect = ((xb >= pos) & (xb <= pos + panel_wd) & 
                     (yb >= 0) & (yb <= panel_len))
-            if (blk == 0):
-                print(sum(intersect))
             phits[...] += sum(intersect)
             # Keep track of the average angle and stdev
             th[...] += sum(theta[intersect])
             th2[...] += sum(theta[intersect]**2)
 
-    return {'counts':hits, 'theta_avg':th_acc/n,
-            'theta_stdev':sqrt(th2_acc/n - (th_acc/n)**2)}
+    return {'counts':hits, 'theta_avg':th_acc/hits,
+            'theta_stdev':sqrt(th2_acc/hits - (th_acc/hits)**2)}
 
 

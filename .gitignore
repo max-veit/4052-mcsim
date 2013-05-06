@@ -1,5 +1,6 @@
 mc_sim
 *.swp
+__pycache__
 # Prevent auto-adding of generated CSV files`
 *.csv
 
