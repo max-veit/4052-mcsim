@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import numpy as np
-from numpy import pi,cos,arccos
+from numpy import pi,cos,arccos,sin,tan,sum,size
 from numpy.random import random_sample
+from math import ceil
 
 def mk_cosk_dist(k, th_max):
     """Return a function that transforms two uniformly-distributed
@@ -29,9 +30,15 @@ def mk_cosk_dist(k, th_max):
         theta = arccos((1 - th_norm*u_th)**(1 / (k+1)))
         phi = u_ph / (2*pi)
         return (theta, phi)
+    return cosk_dist
 
 # The default distribution to use
 cos2_dist = mk_cosk_dist(2, pi/2)
+
+def cos2_dist(u_th, u_ph):
+    theta = arccos((1 - u_th)**(1/3))
+    phi = u_ph / (2*pi)
+    return (theta, phi)
 
 def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
         dist=cos2_dist, blksize=1024):
@@ -63,16 +70,17 @@ def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
     blksize         The sizes of trial vectors to use to make this function
                     more efficient with vector processing.
     """
-    nblks = n // blksize
+    nblks = ceil(n / blksize)
     # Account for case when n is not a multiple of blksize
-    if nblks * blksize < n:
-        endblksize = n - nblks * blksize
+    if nblks * blksize > n:
+        endblksize = n - (nblks-1) * blksize
     else :
         endblksize = blksize
+    print("Using {} blocks of size {} (end: {})".format(nblks, blksize, endblksize))
 
-    hits = zeros_like(panel_pos)
-    th_acc = zeros_like(panel_pos)
-    th2_acc = zeros_like(panel_pos)
+    hits = np.zeros_like(panel_pos)
+    th_acc = np.zeros_like(panel_pos)
+    th2_acc = np.zeros_like(panel_pos)
 
     for blk in range(nblks):
         if (blk == (nblks - 1)):
@@ -91,10 +99,23 @@ def get_counts(panel_pos, n=1E7, panel_ht=123.5, panel_wd=19, panel_len=70,
         yb = yt + sin(phi) * panel_ht*tan(theta)
 
         # Count the number of intersections
-        it = nditer([panel_pos, hits], op_flags=['readwrite', 'external_loop'])
-        for pos, phits in it:
+        it = np.nditer([panel_pos, hits, th_acc, th2_acc],
+                op_flags=[['readonly'],
+                          ['readwrite'],
+                          ['readwrite'],
+                          ['readwrite']],
+                )
+        for pos, phits, th, th2 in it:
             intersect = ((xb >= pos) & (xb <= pos + panel_wd) & 
                     (yb >= 0) & (yb <= panel_len))
-            phits += sum(intersect)
+            if (blk == 0):
+                print(sum(intersect))
+            phits[...] += sum(intersect)
+            # Keep track of the average angle and stdev
+            th[...] += sum(theta[intersect])
+            th2[...] += sum(theta[intersect]**2)
+
+    return {'counts':hits, 'theta_avg':th_acc/n,
+            'theta_stdev':sqrt(th2_acc/n - (th_acc/n)**2)}
 
 
